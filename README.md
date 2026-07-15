@@ -91,6 +91,8 @@ The ID problem is cast as maximizing the probability that the assembled configur
 \mathbf{a} \in \underset{\mathbf{a} \in \mathcal{A}}{\arg\max}\; \mathbb{P}\!\left(\Psi(\Phi(x_f(\mathbf{a}))) = \mathbf{g}\right)
 ```
 
+Here $x_f(\mathbf{a})$ is the final particle configuration produced by the MD simulation under interaction parameters $\mathbf{a}$, $\Phi$ extracts a structural descriptor vector from that configuration via local structural analysis (PTM or CNA), and $\Psi$ maps the descriptor to a discrete crystal class.
+
 ### Algorithm
 
 The policy $\pi_\theta$ is a deterministic actor network $\mu_\theta: \mathcal{S} \times \mathcal{G} \rightarrow \mathbb{R}^{d_a}$ with externalized exploration variance $\sigma_t$ (performance-based noise scheduling). Value estimation uses twin critics $Q_{\phi_1}, Q_{\phi_2}$ (TD3-style clipped double Q-learning). The full algorithm combines:
