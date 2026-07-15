@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Claude Code
+.claude/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# Large binary/data files (host on Zenodo/figshare instead)
+*.gsd
+*.pth
+
+# Job scheduler outputs
+*.out
+*.err
+
+# Local scripts not for distribution
+github_update_command.txt
+a5000.gpu
+a.gpu
+a_node_gpu_OHC.sh
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
