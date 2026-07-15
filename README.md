@@ -108,7 +108,7 @@ The policy $\pi_\theta$ is a deterministic actor network $\mu_\theta: \mathcal{S
 \end{cases}
 ```
 
-where $\sigma_{\text{hi}} = 0.45$, $\sigma_{\text{lo}} = 0.005$, $B = 6$, and $\Delta\mathbf{a} = \mathbf{a}_{\max} - \mathbf{a}_{\min}$.
+where $\sigma_{\text{hi}} = 0.45$, $\sigma_{\text{lo}} = 0.005$, $B = 6$, and $\Delta\mathbf{a} = \mathbf{a}_{\text{max}} - \mathbf{a}_{\text{min}}$.
 
 ### Network Architecture
 
