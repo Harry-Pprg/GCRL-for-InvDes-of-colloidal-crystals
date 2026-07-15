@@ -103,12 +103,12 @@ The policy $\pi_\theta$ is a deterministic actor network $\mu_\theta: \mathcal{S
 
 ```math
 \boldsymbol{\sigma}_{t+1} = \begin{cases}
-\sigma_{\text{hi}}\,\Delta\mathbf{a} & t < e_{\text{explore}} \\
-\left[\Delta\sigma\,(1 - p_t)^B + \sigma_{\text{lo}}\right]\Delta\mathbf{a} & \text{otherwise}
+\sigma_{\text{hi}}\,(\mathbf{a}_{\text{max}} - \mathbf{a}_{\text{min}}) & t < e_{\text{explore}} \\
+\left[(\sigma_{\text{hi}} - \sigma_{\text{lo}})\,(1 - p_t)^B + \sigma_{\text{lo}}\right](\mathbf{a}_{\text{max}} - \mathbf{a}_{\text{min}}) & \text{otherwise}
 \end{cases}
 ```
 
-where $\sigma_{\text{hi}} = 0.45$, $\sigma_{\text{lo}} = 0.005$, $B = 6$, and $\Delta \mathbf{a} = \mathbf{a}_{\text{max}} - \mathbf{a}_{\text{min}}$.
+where $\sigma_{\text{hi}} = 0.45$, $\sigma_{\text{lo}} = 0.005$, $B = 6$, $p_t$ is the empirical success rate at epoch $t$, and $e_{\text{explore}}$ is the number of initial pure-exploration epochs.
 
 ### Network Architecture
 
