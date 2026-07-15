@@ -77,7 +77,11 @@ u^{\text{LJ}}_{ij}(r) + (1 - \lambda_{ij})\,\varepsilon & r \leq 2^{1/6}\sigma_{
 \end{cases}
 ```
 
-where $u^{\text{LJ}}_{ij}(r) = 4\varepsilon\!\left[\left(\frac{\sigma_{ij}}{r}\right)^{12} - \left(\frac{\sigma_{ij}}{r}\right)^{6}\right]$ is the standard LJ potential. Setting $\lambda_{ij} = 0$ recovers the purely repulsive WCA potential; $\lambda_{ij} > 0$ introduces an attractive well, making the interaction enthalpically driven. The unlike-particle interaction length is fixed at $\sigma_{AB} = 1.0$.
+where the standard LJ potential is:
+
+```math
+u^{\text{LJ}}_{ij}(r) = 4\varepsilon\left[\left(\frac{\sigma_{ij}}{r}\right)^{12} - \left(\frac{\sigma_{ij}}{r}\right)^{6}\right]
+``` Setting $\lambda_{ij} = 0$ recovers the purely repulsive WCA potential; $\lambda_{ij} > 0$ introduces an attractive well, making the interaction enthalpically driven. The unlike-particle interaction length is fixed at $\sigma_{AB} = 1.0$.
 
 The ID problem is cast as maximizing the probability that the assembled configuration is classified as the desired crystal motif $\mathbf{g}$:
 
