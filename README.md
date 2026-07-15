@@ -17,7 +17,6 @@ Harry Papargyriou¹, Ryan Soucek², Hsiao-Yen Beth Wei², Jeetain Mittal²·³·
 
 - [Abstract](#abstract)
 - [Framework](#framework)
-- [Key Results](#key-results)
 - [Method Summary](#method-summary)
   - [Inverse Design as a GCRL Problem](#inverse-design-as-a-gcrl-problem)
   - [Algorithm](#algorithm)
@@ -34,6 +33,12 @@ Harry Papargyriou¹, Ryan Soucek², Hsiao-Yen Beth Wei², Jeetain Mittal²·³·
   - [Post-Training Analysis](#post-training-analysis)
 - [Project Structure](#project-structure)
 - [Core Components](#core-components)
+  - [1. Training Script](#1-training-script-run_policypy)
+  - [2. MD Simulation Engine](#2-md-simulation-engine-md_enginepy)
+  - [3. Structure Classification](#3-structure-classification-structure_recognitionpy)
+  - [4. Replay Buffer](#4-replay-buffer-replay_bufferpy)
+  - [5. Visualization](#5-visualization-make_figurespy)
+  - [6. Configuration Generator](#6-configuration-generator-generate_confpy)
 - [Workflow](#workflow)
 - [System Requirements](#system-requirements)
 - [Important Notes](#important-notes)
@@ -56,19 +61,6 @@ Colloidal self-assembly provides a scalable route to fabricating materials with 
 ![GCRL Framework](assets/GCRL_framework.png)
 
 The closed-loop inverse design framework starts from a target crystal structure **g** and a disordered particle configuration **s**. The goal-conditioned RL policy π_θ(**α** | **s**, **g**) proposes an action **α** = [σ_AA/BB, λA_A/BB, λ_AB] consisting of modified Lennard-Jones pair potential parameters for like- and unlike-particle species. These potentials are evaluated through coarse-grained implicit-solvent MD simulations (HOOMD-blue, Langevin dynamics) under a temperature-annealing schedule (T* = 1 → 0.01). The final assembled configuration s′ is structurally analyzed and converted to a binary reward signal r ∈ {0, −1}. Transitions (s, α, r, s′, g) are stored in a replay buffer; hindsight experience replay (HER) relabels trajectories where non-target structures form, so that failed episodes still contribute useful learning signal.
-
----
-
-## Key Results
-
-- **7 binary colloidal crystal structures** successfully inverse-designed, spanning 2D and 3D motifs:
-  - *2D*: Square Lattice (SL), Open Honeycomb (OHC), Square Single Stripe (SSS), Binary Triangular Kagome (BTr)
-  - *3D*: Simple Cubic (SC), Cubic Diamond (CD), Body-Centered Cubic (BCC)
-- SSS and BTr were **previously unrealized with attractive pair potentials** (bonding minima V < 0); GCRL designs enthalpically-driven interactions for both.
-- GCRL **converges within ~50 training epochs** from a physics-agnostic initialization at the center of parameter space.
-- The framework is **robust to initialization**: three independent runs for OHC starting from physically distinct regions of parameter space all converge to potentials that drive successful assembly.
-- Validation simulations (10× longer, 3–4k particles) confirm reproducible crystallization across 5 independent stochastic trajectories per structure, with crystallization fractions of 0.8–1.0.
-- The ratio $\sigma_{ii}/\sigma_{ij}$ emerges as the **primary geometric design parameter**; the well-depth ratio $\lambda_{ii}/\lambda_{ij}$ spans a broad basin of solutions, revealing a many-to-one mapping between pair potentials and assembled structures.
 
 ---
 
@@ -124,75 +116,102 @@ Actor $\mu_\theta$ and twin critics $Q_{\phi_1}, Q_{\phi_2}$ are fully connected
 
 ---
 
-## GC_Std_scheduler
-
-Reinforcement learning framework for designing interaction potentials to drive self-assembly of particle systems into target crystal structures.
-
-## Overview
-
-This project implements a reinforcement learning approach using a Goal-Conditioned Reinforcement Learning algorithm to learn optimal Lennard-Jones-type interaction potentials that guide particle systems toward specific target structures (e.g., FCC, HCP, Square Lattice, Honeycomb). The system uses molecular dynamics simulations via HOOMD-blue and structural analysis with OVITO's Polyhedral Template Matching (PTM).
-
-## Key Features
-
-- **Reinforcement Learning**: Policy gradient methods for learning optimal interaction parameters
-- **Molecular Dynamics**: HOOMD-blue integration for efficient particle simulations
-- **Structure Analysis**: Automated crystal structure classification using OVITO PTM and CNA
-- **Parallel Computing**: Multi-threaded simulation execution for batch training
-- **Experience Replay**: Buffer system for storing and replaying training trajectories
-- **Visualization**: Comprehensive plotting of training metrics, success rates, and action evolution
-
 ## Project Structure
 
 ```
-GC_Std_scheduler/
-├── main_val.py                    # Main training script with NN architecture
-├── reproduce_pot.py               # Parallel MD simulation engine
-├── Buffer.py                      # Experience replay buffer with plotting methods
-├── helper.py                      # Pretraining and visualization utilities
-├── visualize.py                   # Training visualizer
-├── cna_ohc_traj.py               # Structure analysis (CNA/PTM) for 2D systems
-├── 2d_initial_conf.py            # 2D initial configuration generator
-├── relabel_particles.py          # Particle relabeling utilities
-├── crystal.conf                  # Configuration file for 2D structure analysis
-├── Initial_Configurations/       # Initial system configurations (2D/3D)
-├── Target_RDF/                   # Reference radial distribution functions
-├── Model_and_Results/            # Trained models and training results
-├── Trajectories_and_Potentials/  # Simulation outputs and interaction tables
-├── RDF_plots/                    # RDF visualization outputs
-└── PLOTTING_USAGE.md             # Documentation for Buffer plotting methods
+GCRL_HOOMD/
+├── Run_Policy.py                  # Main training script: actor/critic networks, training loop
+├── MD_engine.py                   # MD simulation engine and parallel execution
+├── Structure_recognition.py       # Crystal structure classification (CNA + PTM)
+├── Replay_Buffer.py               # HER replay buffer with sampling strategies and plotting
+├── Make_figures.py                # Post-training visualization (training dynamics figures)
+├── Generate_conf.py               # Target crystal configuration and RDF generator
+├── crystal.conf                   # CNA descriptor cutoffs for 2D structure classification
+│                                  #   (SL, OHC, SSS, BTr) — cutoff values match those
+│                                  #   used in the SLURM job scripts
+├── Initial_Configurations/        # Thermalized disordered initial states (2D and 3D)
+├── Target_RDF/                    # Target RDF JSON files and reference GSD configurations
+├── Model_and_Results/             # Training outputs (organized per run)
+│   ├── 1_data/training_dynamics/  # buffer.csv, actions, rewards, noise scheduler CSVs
+│   ├── 1_data/network_metrics/    # critic loss, Q-values, actor distribution, gradients
+│   ├── 2_checkpoints/             # policy_model.pt, q1/q2_model.pt, optimizer states
+│   ├── 3_results/                 # best_design_parameters.csv, early_stopping_info.txt
+│   └── 4_plots/                   # PDF/SVG training dynamics figures
+├── Trajectories_and_Potentials/   # Tabulated pair potential .dat files per GPU/epoch
+├── RDF_plots/                     # Per-epoch RDF comparison SVGs (sampled vs target)
+├── assets/                        # README figures
+└── MULTI_NODE_SETUP.md            # Multi-node SLURM execution guide
 ```
 
 ## Core Components
 
-### 1. Neural Network Architecture (main_val.py)
+### 1. Training Script (`Run_Policy.py`)
 
-- **Policy Network**: Gaussian policy that outputs interaction potential parameters
-- **Action Space**: Lennard-Jones parameters (σ, λ) for different particle pair types
-- **Observation Space**: Structure fractions from PTM classification
-- **Goal-Conditioned**: Networks receive both state and goal structure target
+The main entry point. Implements the full GCRL training loop:
 
-### 2. Simulation Engine (reproduce_pot.py)
+- **`ActorNet`**: Fully connected network $\mu_\theta: \mathcal{S} \times \mathcal{G} \rightarrow \mathbb{R}^3$ mapping state-goal concatenation $[\mathbf{s}, \mathbf{g}]$ through a bottleneck layer (width 20) and two hidden layers (width 32, Tanh) to mean actions $[\sigma_{ii}, \lambda_{ii}, \lambda_{ij}]$. Exploration is externalized via scheduled $\sigma_t$; actions are bounded via tanh rescaling.
+- **`CriticNet`**: Twin Q-networks $Q_{\phi_1}, Q_{\phi_2}$ taking $[\mathbf{s}, \mathbf{a}, \mathbf{g}]$ as input, same architecture as actor. Per epoch: 10 critic gradient steps followed by 1 actor update on the final critic step.
+- **`pretrain_policy_mean`**: Optional pretraining phase (MSE in pre-tanh space) that initializes $\mu_\theta$ near the center of the parameter space before RL begins, avoiding cold-start drift.
+- **`compute_goal_reward`**: Sparse binary reward — $r = 0$ if the normalized target structure fraction $\geq$ `success_threshold`, else $r = -1$.
+- **`alpha_scheduler`**: Linear entropy temperature decay from $\alpha = 1.0$ to $0$ over the first 10 epochs, shifting the actor from exploration toward exploitation.
+- **HER loop**: Each transition is stored twice in the replay buffer — once under the original goal $\mathbf{g}$ and once under the achieved structure $\mathbf{g}'$ (if different), densifying the reward signal.
+- **Early stopping**: Training halts when the full batch achieves 100% success in a single epoch.
+- **Checkpointing**: Policy, critics, optimizer states, sigma, and training history are saved to `2_checkpoints/` at every epoch and on early stopping.
 
-- **MD Backend**: HOOMD-blue for GPU-accelerated molecular dynamics
-- **Custom Potentials**: Tabulated pair potentials with trainable parameters
-- **Structure Analysis**: Real-time PTM classification during simulation
-- **Progress Tracking**: ETA estimation and throughput monitoring
+---
 
-### 3. Experience Buffer (Buffer.py)
+### 2. MD Simulation Engine (`MD_engine.py`)
 
-Stores transitions (s, a, r, s', g) and provides:
-- CSV-based persistence
-- Success rate tracking per goal structure
-- Action uncertainty analysis (exploration → exploitation)
-- Q-value progression estimation
+Handles potential generation, HOOMD-blue simulation, and result collection:
 
-See `PLOTTING_USAGE.md` for detailed plotting API documentation.
+- **`lj_nm_cut`**: Computes the modified LJ potential and force tables for AA, BB, and AB pairs given $(\sigma_{ii}, \lambda_{ii}, \lambda_{ij})$. Tabulated `.dat` files are written per GPU to `Trajectories_and_Potentials/Potentials/`.
+- **`callhoomd`**: Launches a single HOOMD-blue simulation. Sets up Langevin dynamics with a custom `TempSchedule` variant that cools linearly from $T^* = 1$ to $T^* = 0.01$ over the full run. Writes a GSD trajectory and calls `Structure_recognition` at the end to classify the final configuration.
+- **`run_step_parallel`**: Wrapper that generates potentials, runs `callhoomd`, computes the RDF of the result, and returns $(x_k, r)$ — the structure fraction vector and binary reward. Also saves a per-epoch RDF comparison plot to `RDF_plots/`.
+- **`calc_state`**: Dispatches a batch of $B$ independent simulations in parallel. Automatically detects whether multiple SLURM nodes are available and routes to `run_multinode_slurm` (multi-node) or `ProcessPoolExecutor` (single-node).
+- **`get_slurm_nodes` / `run_multinode_slurm`**: Multi-node execution via `srun` with round-robin GPU assignment across nodes. Results are exchanged through temporary pickle files in `multinode_results/`.
 
-### 4. Structure Analysis
+---
 
-- **3D Systems**: PTM classification (FCC, HCP, BCC, ICO, SC, Cubic/Hex Diamond)
-- **2D Systems**: CNA-based classification (Square Lattice, Honeycomb/Graphene)
-- **Metrics**: Normalized structure fractions relative to target goals
+### 3. Structure Classification (`Structure_recognition.py`)
+
+Handles both 2D and 3D crystal recognition:
+
+- **`CNA_Classification`** (2D): Reads `crystal.conf` for per-structure CNA descriptor signatures and cutoffs. For each frame, independently classifies particles into SL, OHC, SSS, and BTr using bond-based CNA with structure-specific cutoff factors. Returns a normalized fraction array of shape `(n_frames, 4)`.
+- **`PTM_Classification`** (3D): Applies OVITO's Polyhedral Template Matching (PTM) with RMSD cutoff 0.15 to classify FCC, HCP, BCC, ICO, SC, Cubic Diamond, and Hexagonal Diamond. Cubic and Hexagonal Diamond fractions are combined to handle polymorphism. Also uses OVITO's Identify Diamond Structure (IDS) modifier for diamond-phase resolution. Returns a normalized fraction array of shape `(n_frames, n_structures)`.
+
+---
+
+### 4. Replay Buffer (`Replay_Buffer.py`)
+
+CSV-backed HER buffer storing transitions $(s, \mathbf{a}, r, s', g)$:
+
+- **`add`**: Accepts single or batched transitions; records state, action (full 4D: $[\sigma_{ii}, \sigma_{AB}, \lambda_{ii}, \lambda_{ij}]$), reward, next state, goal index, achieved structure index, and epoch.
+- **`initialize_random`**: Seeds the buffer before training by running `calc_state` on random actions, providing an initial distribution of outcomes for early critic learning.
+- **`sample` / `sample_target_goal`**: Two sampling strategies — `uniform` and `meaningful_bias`. The latter guarantees at least one success transition per batch (if any exist) while filling the rest uniformly, preventing Q-collapse under sparse rewards. After the exploration phase, sampling is restricted to transitions matching the target goal.
+- **Plotting methods**: `plot_success_rate`, `plot_action_uncertainty`, `plot_q_value_progression` — read directly from `buffer.csv` and save SVG/PNG figures to a specified output directory.
+
+---
+
+### 5. Visualization (`Make_figures.py`)
+
+Generates publication-quality training dynamics figures automatically called at the end of `Run_Policy.py`:
+
+- Produces a 2×2 panel per structure: $\lambda_{ii}$ vs epoch (top-left), $\sigma_{ii}$ vs epoch (top-right), $\lambda_{ij}$ vs epoch (bottom-left), and mean reward + average crystal quality on dual y-axes (bottom-right).
+- Reads from `buffer.csv` in `1_data/training_dynamics/`; prepends a synthetic epoch-0 point at the center of the action space to visualize convergence from initialization.
+- Structure-specific color schemes match those used in the paper figures.
+- Saves both PDF and SVG to `4_plots/`.
+- Can also be run standalone: `python Make_figures.py --run_dir ./Model_and_Results --str_index 7 --three_d 0`
+
+---
+
+### 6. Configuration Generator (`Generate_conf.py`)
+
+Generates perfect crystal configurations and target RDFs for all supported lattice types:
+
+- Supported lattices: `checkerboard` (SL), `open-honeycomb` (OHC), `triangular-binary` (BTr), `cubic-diamond` (CD), `hex-diamond`, `cscl` (BCC), `fcc`, `rectangular-kagome`.
+- Constructs unit cells analytically, replicates them by $n_x \times n_y \times n_z$, and samples 100 Einstein-crystal displacements to compute thermally averaged RDFs for all AA, AB, BB pairs.
+- Saves target RDFs as JSON to `Target_RDF/` and optionally writes an initial GSD configuration.
+- Example: `python Generate_conf.py --lattice open-honeycomb -n 6 6 1 -o Target_RDF/target_OHC.json -i Initial_Configurations/ohc_init.gsd`
 
 ## Installation
 
