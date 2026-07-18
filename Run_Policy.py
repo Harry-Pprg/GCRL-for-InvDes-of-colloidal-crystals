@@ -331,8 +331,8 @@ if __name__ == "__main__":
         print(f"[OK] File found: {args.goal_rdf_json_file}", flush=True)
     first_run = args.first_run
 
-    # GPU support: use GPU if available, otherwise fall back to CPU
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # Policy/critic networks run on CPU; GPUs are used exclusively by HOOMD simulations
+    device = torch.device("cpu")
     print(f"[INFO] Using device: {device}", flush=True)
 
     # 1. Initialize policy and critics
