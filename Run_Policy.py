@@ -342,7 +342,7 @@ if __name__ == "__main__":
         batch_size,
         u_min=torch.tensor([0.4, 0.0, 0.0]), # Make sure it is the same with buffer
         u_max=torch.tensor([2.5, 3.0, 3.0])
-    ).to(device)
+    ).to(device)  # policy runs on cpu
     q1_net = CriticNet(args.obs_dim, args.action_dim).to(device)
     q2_net = CriticNet(args.obs_dim, args.action_dim).to(device)
 
