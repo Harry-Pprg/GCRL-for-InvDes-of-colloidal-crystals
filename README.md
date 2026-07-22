@@ -260,7 +260,7 @@ conda install --strict-channel-priority -c https://conda.ovito.org -c conda-forg
 ### Basic Training
 
 ```python
-python main_val.py
+python Run_Policy.py
 ```
 
 Training parameters are configured within the script via an `args` namespace containing:
@@ -274,23 +274,24 @@ Training parameters are configured within the script via an `args` namespace con
 
 Key parameters to adjust:
 
-1. **Target Structure** (in `main_val.py`):
+1. **Target Structure** (in `Run_Policy.py`):
 ```python
-args.goal_dic = {'FCC': 0.8, 'HCP': 0.1, 'BCC': 0.0, ...}
-args.ig = 0  # Index of primary goal (FCC in this case)
+args.str_index = 4   # Index of target structure in the OVITO particle counter array
+args.ig = ...        # Index of goal structure in the goal dictionary (required)
+args.obs_dim = ...   # Observation dimension — number of structure types (required)
 ```
 
-2. **Simulation Settings** (in `reproduce_pot.py`):
+2. **Simulation Settings** (in `MD_engine.py`):
 ```python
-total_steps = 10000  # MD steps per episode
-kT = 1.0            # Temperature
-dt = 0.005          # Integration timestep
+total_steps = int(1e7)  # MD steps per episode (--Nc)
+dt = 1e-3               # Integration timestep (--dt)
+gamma = 0.1             # Langevin friction coefficient (m/τ)
 ```
 
 3. **Action Bounds**:
 ```python
-u_min = [0.5, 0.0, 0.0]  # [σ_min, λ_min, λ_min]
-u_max = [2.0, 2.0, 2.0]  # [σ_max, λ_max, λ_max]
+u_min = [0.4, 0.0, 0.0]  # [σ_min, λ_II_min, λ_IJ_min]
+u_max = [2.5, 3.0, 3.0]  # [σ_max, λ_II_max, λ_IJ_max]
 ```
 
 ### Output Files
@@ -316,14 +317,14 @@ Model_and_Results/YYYY-MM-DD_HH-MM-SS/
 Generate plots from saved buffer:
 
 ```python
-from Buffer import Buffer
+from Replay_Buffer import Buffer
 
 buffer = Buffer(
     buffer_path="Model_and_Results/run_dir/buffer.csv",
-    obs_dim=8, action_dim=4, u_min=[0.5,0,0], u_max=[2,1,1]
+    obs_dim=8, action_dim=3, u_min=[0.4, 0.0, 0.0], u_max=[2.5, 3.0, 3.0]
 )
 
-buffer.plot_success_rate(target_goal=0, batch_size=16, output_dir="plots/")
+buffer.plot_success_rate(target_goal=0, batch_size=6, output_dir="plots/")
 buffer.plot_action_uncertainty(output_dir="plots/")
 buffer.plot_q_value_progression(output_dir="plots/")
 ```
@@ -346,10 +347,10 @@ buffer.plot_q_value_progression(output_dir="plots/")
 
 ## Important Notes
 
-- **2D vs 3D**: System dimensionality is configured via `cna_ohc_traj.py` for 2D systems
-- **Pretraining**: Use `helper.train_actor_to_target()` to initialize policy near known good actions
-- **Checkpoints**: Models saved as `.pth` files can be reloaded for continued training
-- **Validation**: Use `reproduce_pot.py` independently to validate learned potentials
+- **2D vs 3D**: System dimensionality is set via `--three_d 0` (2D) or `--three_d 1` (3D); `Structure_recognition.py` handles classification for both cases
+- **Pretraining**: Policy mean is pretrained via `--pretrain_mu 1` with target actions set by `--pretrain_target` (default: `[1.45, 1.5, 1.5]`)
+- **Checkpoints**: Policy, critics, and optimizer states are saved to `2_checkpoints/` at every epoch and can be reloaded by setting `--first_run 0`
+- **Validation**: Run `MD_engine.py` independently to validate learned potentials on larger systems
 
 ## Multi-Node GPU Execution
 
