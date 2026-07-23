@@ -296,32 +296,31 @@ u_max = [2.5, 3.0, 3.0]  # [σ_max, λ_II_max, λ_IJ_max]
 
 ### Output Files
 
-Each training run creates a timestamped directory in `Model_and_Results/` containing:
+Training outputs are saved to a fixed directory structure under `Model_and_Results/`:
 
 ```
-Model_and_Results/YYYY-MM-DD_HH-MM-SS/
-├── buffer.csv                    # Experience replay data
-├── training_data.csv             # Per-epoch metrics
-├── actions.csv                   # Action history
-├── actor_final.pth               # Trained policy network
-├── Learn_loss_plot.svg           # Loss over epochs
-├── Learn_state_plot.svg          # Structure fraction over epochs
-├── Learn_action_plot.svg         # Action evolution over epochs
-├── success_rate_goal_X.svg       # Success rate for target structure
-├── action_uncertainty.svg        # Action std over epochs
-└── q_value_progression.svg       # Mean reward progression
+Model_and_Results/
+├── 1_data/
+│   ├── training_dynamics/        # buffer.csv, actions, rewards, noise scheduler CSVs
+│   └── network_metrics/          # critic loss, Q-values, actor distribution, gradients
+├── 2_checkpoints/                # policy_model.pt, q1/q2_model.pt, optimizer states
+├── 3_results/                    # best_design_parameters.csv, early_stopping_info.txt
+└── 4_plots/                      # PDF/SVG training dynamics figures
 ```
 
 ### Post-Training Analysis
 
-Generate plots from saved buffer:
+The plotting methods in `Replay_Buffer.py` can be called standalone after training to generate figures from the saved buffer:
 
 ```python
 from Replay_Buffer import Buffer
 
 buffer = Buffer(
-    buffer_path="Model_and_Results/run_dir/buffer.csv",
-    obs_dim=8, action_dim=3, u_min=[0.4, 0.0, 0.0], u_max=[2.5, 3.0, 3.0]
+    buffer_path="Model_and_Results/1_data/training_dynamics/buffer.csv",
+    obs_dim=8,
+    action_dim=4,  # full 4D: [σ_II, σ_AB, λ_II, λ_IJ]
+    u_min=[0.4, 1.0, 0.0, 0.0],
+    u_max=[2.5, 1.0, 3.0, 3.0]
 )
 
 buffer.plot_success_rate(target_goal=0, batch_size=6, output_dir="plots/")
@@ -444,7 +443,7 @@ Reference data for all seven studied crystal structures is included in this repo
 | `Initial_Configurations/` | Thermalized disordered initial particle configurations used for both training and validation runs (2D and 3D systems) |
 | `Target_RDF/` | Target radial distribution functions (RDFs) for each crystal structure, used as reference descriptors during training |
 | `crystal.conf` | CNA descriptor definitions for 2D structure classification (Square Lattice, Honeycomb, Square Single Stripe, Binary Triangular Kagome) |
-| `2d_initial_conf.py` | Script to generate perfect crystal configurations of the target structures, which can be used as reference or to create new initial conditions |
+| `Generate_conf.py` | Script to generate perfect crystal configurations and target RDFs for all supported lattice types, which can be used as reference or to create new initial conditions |
 
 These files are sufficient to reproduce all training runs reported in the paper without generating new initial conditions.
 
